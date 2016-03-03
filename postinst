@@ -1,0 +1,113 @@
+#!/bin/sh
+
+# Made by DiDA for iOSGods.com! - Version 1.2.7 - Visit https://github.com/iOSGods/Auto-Lipo-for-iOS-5-to-iOS-9-/ for an up-to-date version!
+
+
+#################################################################################
+
+iosgods_binary="/var/mobile/Documents/Binary/BinaryName"
+iosgods_target_directory="/var/mobile/Containers/Bundle/Application/*/AppName.app/"
+#iosgods_lipoarm64="/usr/bin/LipoARM64Name"
+#lipoarm64_binarytarget="BinaryName"
+
+# File which will be used to differentiate between same folders.
+diff_file="DifferentFile"
+
+#################################################################################
+
+
+set -e
+
+ig_mv_perms() {
+	# Kill the app if it's running before continuing
+	killall -9 "${iosgods_binary##*/}" || :
+	
+    # Check if the specified binary exists in the location provided above, otherwise output an error
+    if [ ! -f "${iosgods_binary}" ]; then
+        printf "${iosgods_binary} file couldn't be found, please check if the specified location is correct. If the issue still persists, ask for help on iOSGods.com\\n\\n"
+        exit 1
+    fi
+
+    # Check if there is a '*' character in the target directory variable and process if that's the case
+    if [ "${iosgods_target_directory}" != "${iosgods_target_directory%%\***}" ]; then
+        base_iosgods_target_directory="${iosgods_target_directory%%\***}"
+        prefix_iosgods_target_directory="${iosgods_target_directory##**\*}"
+
+        # Search prefix_iosgods_target_directory on base_iosgods_target_directory directory
+        i="0"; for t in $base_iosgods_target_directory/* ; do
+            if [ -d "${t}${prefix_iosgods_target_directory}" ]; then
+                # Found, replace iosgods_target_directory with real path
+                iosgods_target_directory="${t}${prefix_iosgods_target_directory}"
+                i="$((i + 1))"
+                i="$((i + 1))"
+               #break
+            else
+                continue
+            fi
+        done
+		
+		# If one or more folders are found with the same name, then the script will look
+        # for a filename supplied by the user inside the two (or more folders) and
+        # then if found on x folder, move the other file to that folder.
+        if [ "${i}" -gt "1" ]; then
+            for t in $base_iosgods_target_directory/* ; do
+            if [ -f "${t}${prefix_iosgods_target_directory}/${diff_file}" ]; then
+                # Found, replace iosgods_target_directory with real path
+                iosgods_target_directory="${t}${prefix_iosgods_target_directory}"
+                break
+            else
+                continue
+            fi
+            done
+        fi
+    fi
+
+    if [ ! -d "${iosgods_target_directory}" ]; then
+        printf "${iosgods_target_directory} directory wasn't found, please make sure you have the app installed or ask for support on iOSGods.com\\n\\n"
+        exit 1
+    fi
+
+    # Changing permissions prior to moving the binary to simplify code
+    chmod 755 "${iosgods_binary}"
+    chown mobile:mobile "${iosgods_binary}"
+	
+	# Moving thinned binary to the specified app's directory
+    printf "\\n\\n** Applying the hack...\\n"
+    mv "${iosgods_binary}" "${iosgods_target_directory}"
+	printf "\\n** Made by DiDA for iOSGods.com!\\n"
+}
+
+
+case "${1}" in
+    configure)
+
+        # Read sw_vers output and act upon it
+        case "$(sw_vers -productVersion)" in
+            5*|6*|7*) # If iOS 5, 6, or 7 is detected
+                printf "*************************************\\n"
+                printf "* iOS 7 or lower has been detected. *\\n"
+                printf "*************************************\\n\\n"
+
+                target_directory="${target_directory_iOS7_or_lower}"
+                ig_mv_perms
+
+                ;;
+
+            8*|9*|10*) # If iOS 8+ is detected
+                printf "****************************\\n"
+                printf "* iOS 8.0 or higher has been detected. *\\n"
+                printf "****************************\\n\\n"
+
+                target_directory="${target_directory_iOS8_or_greater}"
+                ig_mv_perms
+
+                ;;
+        esac
+        ;;
+    abort-upgrade|abort-deconfigure|abort-remove)
+        ;;
+    *)
+        printf "%s\\n" "${0} called with unknown argument \`${1}'" 1>&2
+        exit 1
+        ;;
+esac
